@@ -1,0 +1,28 @@
+# Dependencies
+frontend/node_modules/
+backend/__pycache__/
+backend/venv/
+backend/.venv/
+*.pyc
+
+# Environment
+.env
+.env.local
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Stockfish
+backend/stockfish/

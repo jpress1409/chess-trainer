@@ -42,7 +42,14 @@ Write-Host "Starting backend server on port $backendPort..." -ForegroundColor Cy
 $backendProcess = Start-Process -FilePath "python" -ArgumentList "main.py" -WorkingDirectory $backendDir -WindowStyle Normal -PassThru
 
 # Wait a moment for backend to start
-Start-Sleep -Seconds 2
+Start-Sleep -Seconds 3
+
+# Check if backend is still running
+if ($backendProcess.HasExited) {
+    Write-Host "Backend failed to start. Check Python dependencies." -ForegroundColor Red
+    Write-Host "Run: cd backend && pip install -r requirements.txt" -ForegroundColor Yellow
+    exit 1
+}
 
 # Start frontend server
 Write-Host "Starting frontend server on port $frontendPort..." -ForegroundColor Cyan
@@ -61,6 +68,12 @@ $global:frontendPid = $frontendProcess.Id
 try {
     while ($true) {
         Start-Sleep -Seconds 1
+        
+        # Check if backend is still running
+        if ($backendProcess.HasExited) {
+            Write-Host "Backend has stopped unexpectedly!" -ForegroundColor Red
+            break
+        }
     }
 } finally {
     Write-Host "`nStopping servers..." -ForegroundColor Yellow

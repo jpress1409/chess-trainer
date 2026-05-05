@@ -21,7 +21,6 @@ export default function GamePage() {
   const [game, setGame] = useState(new Chess())
   const [fen, setFen] = useState(game.fen())
   const [gameStatus, setGameStatus] = useState("Ready to play")
-  const [analysis, setAnalysis] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [gameMode, setGameMode] = useState<GameMode>(initialMode)
   const [playerColor, setPlayerColor] = useState<"white" | "black">(initialColor)
@@ -110,7 +109,6 @@ export default function GamePage() {
           } else {
             setFen(game.fen())
             setGameStatus(`Moved ${getPieceName(move.piece)} from ${selectedSquare.toUpperCase()} to ${square.toUpperCase()}`)
-            setAnalysis(null)
             
             // Track move
             setMoveHistory(prev => [...prev, {
@@ -146,9 +144,11 @@ export default function GamePage() {
             if (game.isCheckmate()) {
               setGameStatus("Checkmate!")
               setGameOver(true)
+              handleGameAnalysis()
             } else if (game.isDraw()) {
               setGameStatus("Draw!")
               setGameOver(true)
+              handleGameAnalysis()
             } else if (game.isCheck()) {
               const isWhiteTurn = game.turn() === "w"
               const isPlayerWhite = playerColor === "white"
@@ -247,9 +247,11 @@ export default function GamePage() {
           if (game.isCheckmate()) {
             setGameStatus("CPU Checkmate!")
             setGameOver(true)
+            handleGameAnalysis()
           } else if (game.isDraw()) {
             setGameStatus("Draw!")
             setGameOver(true)
+            handleGameAnalysis()
           } else if (game.isCheck()) {
             const isWhiteTurn = game.turn() === "w"
             const isPlayerWhite = playerColor === "white"
@@ -279,7 +281,6 @@ export default function GamePage() {
     game.undo()
     setFen(game.fen())
     setGameStatus("Last move undone")
-    setAnalysis(null)
     setGameOver(false)
     setKingSquare(null)
     
@@ -292,7 +293,6 @@ export default function GamePage() {
     setGame(newGame)
     setFen(newGame.fen())
     setGameStatus("New game started")
-    setAnalysis(null)
     setIsCpuThinking(false)
     setGameOver(false)
     setSelectedSquare(null)
@@ -310,24 +310,6 @@ export default function GamePage() {
 
   const handleBackToSetup = () => {
     router.push("/setup")
-  }
-
-  const handleAnalysis = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch("http://localhost:8000/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fen: game.fen(), skill_level: difficulty === "easy" ? 5 : difficulty === "medium" ? 10 : 15 }),
-      })
-      const data = await response.json()
-      setAnalysis(data.evaluation)
-    } catch (error) {
-      console.error("Analysis error:", error)
-      setAnalysis("Error connecting to backend")
-    } finally {
-      setLoading(false)
-    }
   }
 
   const updateWinProbability = async () => {
@@ -407,20 +389,7 @@ export default function GamePage() {
               </div>
             </div>
             
-            {analysis && (
-              <div className="mt-4 p-4 bg-green-900 rounded-lg">
-                <p className="text-green-300">{analysis}</p>
-              </div>
-            )}
-            
             <div className="mt-6">
-              <div className="mb-6 h-8">
-                {isCpuThinking && !gameOver && (
-                  <div className="text-yellow-400 text-lg">
-                    CPU is thinking...
-                  </div>
-                )}
-              </div>
 
               <h3 className="text-xl font-semibold mb-3 mt-6">Game Settings</h3>
               <div className="mb-4">
@@ -483,23 +452,6 @@ export default function GamePage() {
               >
                 Undo Last Move
               </button>
-              <button 
-                onClick={handleAnalysis}
-                disabled={loading || gameOver}
-                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded disabled:bg-gray-600 w-full"
-              >
-                {loading ? "Analyzing..." : "Get Analysis"}
-              </button>
-
-              {gameOver && (
-                <button 
-                  onClick={handleGameAnalysis}
-                  disabled={loading}
-                  className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded disabled:bg-gray-600 w-full mt-2"
-                >
-                  {loading ? "Analyzing..." : "Get Game Analysis (AI)"}
-                </button>
-              )}
 
               {gameOver && (
                 <div className="mt-4 text-red-400 font-semibold">
@@ -530,7 +482,6 @@ export default function GamePage() {
 
                   setFen(game.fen())
                   setGameStatus(`Moved ${getPieceName(move.piece)} from ${sourceSquare.toUpperCase()} to ${targetSquare.toUpperCase()}`)
-                  setAnalysis(null)
       
                   // Track move
                   setMoveHistory(prev => [...prev, {
@@ -565,9 +516,11 @@ export default function GamePage() {
       if (game.isCheckmate()) {
         setGameStatus("Checkmate!")
         setGameOver(true)
+        handleGameAnalysis()
       } else if (game.isDraw()) {
         setGameStatus("Draw!")
         setGameOver(true)
+        handleGameAnalysis()
       } else if (game.isCheck()) {
         const isWhiteTurn = game.turn() === "w"
         const isPlayerWhite = playerColor === "white"

@@ -2,9 +2,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import chess
+import chess.engine
 import os
+import math
 import requests
-from stockfish import Stockfish
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -21,7 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Stockfish
+# Initialize Stockfish path
 STOCKFISH_PATH = os.getenv("STOCKFISH_PATH", "stockfish/stockfish-windows-x86-64-avx2.exe")
 
 # Get absolute path
@@ -31,14 +32,67 @@ STOCKFISH_PATH = os.path.join(script_dir, STOCKFISH_PATH)
 print(f"Looking for Stockfish at: {STOCKFISH_PATH}")
 print(f"File exists: {os.path.exists(STOCKFISH_PATH)}")
 
-try:
-    stockfish = Stockfish(path=STOCKFISH_PATH)
-    print(f"Stockfish initialized successfully from: {STOCKFISH_PATH}")
-except Exception as e:
-    print(f"Warning: Could not initialize Stockfish: {e}")
-    print(f"Please download Stockfish from https://stockfishchess.org/download/")
-    print(f"Extract to backend/stockfish/ directory and ensure the executable exists")
-    stockfish = None
+def evaluate_position(fen: str, depth: int = 18):
+    """
+    Evaluate a chess position using Stockfish and convert to win probabilities.
+    
+    Args:
+        fen: FEN string of the position
+        depth: Analysis depth (default 18)
+    
+    Returns:
+        dict with eval, white_win_prob, black_win_prob
+    """
+    try:
+        # Initialize Stockfish engine
+        engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
+        
+        # Create board from FEN
+        board = chess.Board(fen)
+        
+        # Analyze position
+        info = engine.analyse(board, chess.engine.Limit(depth=depth))
+        
+        # Extract evaluation in centipawns
+        score = info["score"]
+        
+        # Handle mate scores
+        if score.is_mate():
+            # Mate in N moves - convert to large advantage
+            mate_moves = score.mate()
+            if mate_moves > 0:
+                # White mates
+                eval_cp = 10000 - (mate_moves * 100)
+            else:
+                # Black mates
+                eval_cp = -10000 + (abs(mate_moves) * 100)
+        else:
+            # Regular evaluation in centipawns
+            eval_cp = score.white().score(mate_score=10000)
+        
+        # Convert centipawns to pawns
+        eval_pawns = eval_cp / 100.0
+        
+        # Convert to win probability using logistic function
+        # P(white) = 1 / (1 + exp(-0.7 * eval_pawns))
+        white_win_prob = 1.0 / (1.0 + math.exp(-0.7 * eval_pawns))
+        black_win_prob = 1.0 - white_win_prob
+        
+        # Close engine
+        engine.quit()
+        
+        return {
+            "eval": eval_pawns,
+            "white_win_prob": white_win_prob,
+            "black_win_prob": black_win_prob
+        }
+    except Exception as e:
+        print(f"Error evaluating position: {e}")
+        return {
+            "eval": 0.0,
+            "white_win_prob": 0.5,
+            "black_win_prob": 0.5
+        }
 
 class AnalysisRequest(BaseModel):
     fen: str
@@ -47,6 +101,8 @@ class AnalysisRequest(BaseModel):
 class AnalysisResponse(BaseModel):
     best_move: str
     evaluation: str
+    white_win_prob: float
+    black_win_prob: float
 
 class MoveValidationRequest(BaseModel):
     fen: str
@@ -64,67 +120,30 @@ class GameAnalysisResponse(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"message": "Chess Tutor API", "stockfish_ready": stockfish is not None}
+    return {"message": "Chess Tutor API", "stockfish_ready": os.path.exists(STOCKFISH_PATH)}
 
 @app.post("/api/analyze", response_model=AnalysisResponse)
 def analyze_position(request: AnalysisRequest):
     """Analyze a chess position using Stockfish"""
-    if stockfish is None:
+    if not os.path.exists(STOCKFISH_PATH):
         raise HTTPException(status_code=503, detail="Stockfish not available")
     
     try:
-        print(f"Analyzing position: {request.fen} with skill level: {request.skill_level}")
+        # Get best move using Stockfish
+        engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
+        board = chess.Board(request.fen)
+        result = engine.play(board, chess.engine.Limit(depth=request.skill_level))
+        best_move = result.move.uci()
+        engine.quit()
         
-        # Set skill level if provided
-        try:
-            stockfish.set_skill_level(request.skill_level)
-        except AttributeError:
-            print("set_skill_level not available, using default strength")
+        # Get evaluation and win probabilities
+        eval_result = evaluate_position(request.fen, depth=request.skill_level)
         
-        stockfish.set_fen_position(request.fen)
-        best_move = stockfish.get_best_move()
-        print(f"Best move: {best_move}")
-        
-        # Use python-chess for material evaluation since Stockfish library lacks evaluation methods
-        try:
-            board = chess.Board(request.fen)
-            
-            # Material values (in centipawns)
-            piece_values = {
-                chess.PAWN: 100,
-                chess.KNIGHT: 320,
-                chess.BISHOP: 330,
-                chess.ROOK: 500,
-                chess.QUEEN: 900,
-                chess.KING: 0
-            }
-            
-            # Calculate material difference
-            white_material = 0
-            black_material = 0
-            
-            for square in chess.SQUARES:
-                piece = board.piece_at(square)
-                if piece:
-                    value = piece_values.get(piece.piece_type, 0)
-                    if piece.color == chess.WHITE:
-                        white_material += value
-                    else:
-                        black_material += value
-            
-            # Calculate evaluation (positive = white advantage)
-            eval_score = white_material - black_material
-            print(f"Material evaluation: {eval_score} (white: {white_material}, black: {black_material})")
-            
-            eval_str = f"+{eval_score}" if eval_score >= 0 else str(eval_score)
-        except Exception as e:
-            print(f"Error getting material evaluation: {e}")
-            eval_str = "0.0"
-        
-        print(f"Returning evaluation string: {eval_str}")
         return {
             "best_move": best_move,
-            "evaluation": eval_str
+            "evaluation": f"{eval_result['eval']:+.2f}",
+            "white_win_prob": eval_result['white_win_prob'],
+            "black_win_prob": eval_result['black_win_prob']
         }
     except Exception as e:
         print(f"Analysis error: {e}")

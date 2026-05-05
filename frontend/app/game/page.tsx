@@ -339,25 +339,17 @@ export default function GamePage() {
       })
       const data = await response.json()
       console.log("Win probability data:", data)
-      const evalText = data.evaluation || "0.0"
-      console.log("Eval text:", evalText)
-      // Parse evaluation - handle formats like "+1.5", "-2.0", "Mate in 3", etc.
-      let evalScore = 0
-      if (evalText.includes("Mate")) {
-        evalScore = evalText.includes("Mate in") ? 1000 : -1000
+      
+      // Use the win probabilities directly from the API response
+      if (data.white_win_prob !== undefined && data.black_win_prob !== undefined) {
+        setWinProbability({ 
+          white: data.white_win_prob * 100, 
+          black: data.black_win_prob * 100 
+        })
       } else {
-        evalScore = parseFloat(evalText.replace(/[+-]/, "")) || 0
-        if (evalText.startsWith("-")) {
-          evalScore = -evalScore
-        }
+        console.log("Win probabilities not in response, using fallback")
+        setWinProbability({ white: 50, black: 50 })
       }
-      console.log("Parsed eval score:", evalScore)
-      // Convert centipawns to win percentage (simplified formula)
-      const winProb = 1 / (1 + Math.exp(-evalScore / 100))
-      const whiteWin = winProb * 100
-      const blackWin = (1 - winProb) * 100
-      console.log("Win probability:", { whiteWin, blackWin })
-      setWinProbability({ white: whiteWin, black: blackWin })
     } catch (error) {
       console.error("Win probability error:", error)
     }

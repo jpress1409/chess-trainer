@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import dynamic from "next/dynamic"
 import { useRouter, useSearchParams } from "next/navigation"
 
@@ -10,7 +10,7 @@ import { Chess } from "chess.js"
 type GameMode = "pvp" | "pvc"
 type Difficulty = "easy" | "medium" | "hard"
 
-export default function GamePage() {
+function GamePageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   
@@ -608,5 +608,13 @@ export default function GamePage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function GamePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">Loading...</div>}>
+      <GamePageInner />
+    </Suspense>
   )
 }

@@ -425,9 +425,9 @@ export default function GamePage() {
                       onChange={(e) => setDifficulty(e.target.value as Difficulty)}
                       className="w-full bg-gray-700 text-white px-4 py-2 rounded"
                     >
-                      <option value="easy">Easy</option>
-                      <option value="medium">Medium</option>
-                      <option value="hard">Hard</option>
+                      <option value="easy">Easy (~800 Elo)</option>
+                      <option value="medium">Medium (~1500 Elo)</option>
+                      <option value="hard">Hard (~2000 Elo)</option>
                     </select>
                   </div>
                 </>

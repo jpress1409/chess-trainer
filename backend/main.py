@@ -23,11 +23,14 @@ app.add_middleware(
 )
 
 # Initialize Stockfish path
-STOCKFISH_PATH = os.getenv("STOCKFISH_PATH", "stockfish/stockfish-windows-x86-64-avx2.exe")
+_stockfish_env = os.getenv("STOCKFISH_PATH", "stockfish/stockfish-windows-x86-64-avx2.exe")
 
-# Get absolute path
-script_dir = os.path.dirname(os.path.abspath(__file__))
-STOCKFISH_PATH = os.path.join(script_dir, STOCKFISH_PATH)
+# If it's an absolute path or on PATH (no slashes), use as-is; otherwise resolve relative to script dir
+if os.path.isabs(_stockfish_env) or os.sep not in _stockfish_env and "/" not in _stockfish_env:
+    STOCKFISH_PATH = _stockfish_env
+else:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    STOCKFISH_PATH = os.path.join(script_dir, _stockfish_env)
 
 print(f"Looking for Stockfish at: {STOCKFISH_PATH}")
 print(f"File exists: {os.path.exists(STOCKFISH_PATH)}")

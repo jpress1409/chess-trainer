@@ -181,7 +181,7 @@ export default function GamePage() {
     try {
       const skillLevel = difficulty === "easy" ? 5 : difficulty === "medium" ? 10 : 15
       console.log(`Difficulty: ${difficulty} (skill level: ${skillLevel})`)
-      const response = await fetch("http://localhost:8000/api/analyze", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -316,7 +316,7 @@ export default function GamePage() {
 
   const handleHint = async () => {
     try {
-      const response = await fetch("http://localhost:8000/api/analyze", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fen: game.fen(), skill_level: difficulty === "easy" ? 5 : difficulty === "medium" ? 10 : 15 }),
@@ -333,7 +333,7 @@ export default function GamePage() {
 
   const updateWinProbability = async () => {
     try {
-      const response = await fetch("http://localhost:8000/api/analyze", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fen: game.fen(), skill_level: 15 }),
@@ -359,7 +359,7 @@ export default function GamePage() {
   const handleGameAnalysis = async () => {
     setLoading(true)
     try {
-      const response = await fetch("http://localhost:8000/api/game-analysis", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/game-analysis`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

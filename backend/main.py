@@ -183,14 +183,35 @@ Game Details:
 Move History:
 {moves_str}
 
-Please provide:
-1. Overall assessment of the game
-2. Key moments and turning points
-3. Specific advice for the {request.player_color} player
-4. Areas for improvement
-5. Positive moves to highlight
+Please provide your analysis in HTML format with collapsible sections using HTML <details> and <summary> tags. Each section should default to collapsed.
 
-Keep your analysis concise and actionable (under 300 words)."""
+Use the following structure:
+<details>
+<summary>1. Overall Assessment</summary>
+[Content]
+</details>
+
+<details>
+<summary>2. Key Moments and Turning Points</summary>
+[Content]
+</details>
+
+<details>
+<summary>3. Specific Advice for {request.player_color} Player</summary>
+[Content]
+</details>
+
+<details>
+<summary>4. Areas for Improvement</summary>
+[Content]
+</details>
+
+<details>
+<summary>5. Positive Moves to Highlight</summary>
+[Content]
+</details>
+
+Keep your analysis concise and actionable (under 300 words total)."""
 
         # Call OpenRouter API (free tier)
         openrouter_api_key = os.getenv("OPENROUTER_API_KEY", "")

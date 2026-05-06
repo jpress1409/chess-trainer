@@ -565,7 +565,10 @@ export default function GamePage() {
             <h2 className="text-2xl font-semibold mb-4">Game Analysis</h2>
             {gameOver && gameAnalysis && (
               <div className="p-4 bg-purple-900 rounded-lg flex-grow overflow-y-auto">
-                <p className="text-purple-300 whitespace-pre-wrap text-sm">{gameAnalysis}</p>
+                <div 
+                  className="text-purple-300 text-sm"
+                  dangerouslySetInnerHTML={{ __html: gameAnalysis }}
+                />
               </div>
             )}
             {!gameOver && (

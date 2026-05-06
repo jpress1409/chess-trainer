@@ -34,6 +34,7 @@ export default function GamePage() {
   const [gameAnalysis, setGameAnalysis] = useState<string | null>(null)
   const [kingSquare, setKingSquare] = useState<string | null>(null)
   const [winProbability, setWinProbability] = useState<{ white: number; black: number } | null>(null)
+  const [hintSquares, setHintSquares] = useState<{ from: string; to: string } | null>(null)
 
   const getPieceName = (piece: string) => {
     const pieceNames: Record<string, string> = {
@@ -179,6 +180,7 @@ export default function GamePage() {
     setIsCpuThinking(true)
     try {
       const skillLevel = difficulty === "easy" ? 5 : difficulty === "medium" ? 10 : 15
+      console.log(`Difficulty: ${difficulty} (skill level: ${skillLevel})`)
       const response = await fetch("http://localhost:8000/api/analyze", {
         method: "POST",
         headers: {
@@ -310,6 +312,23 @@ export default function GamePage() {
 
   const handleBackToSetup = () => {
     router.push("/setup")
+  }
+
+  const handleHint = async () => {
+    try {
+      const response = await fetch("http://localhost:8000/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fen: game.fen(), skill_level: difficulty === "easy" ? 5 : difficulty === "medium" ? 10 : 15 }),
+      })
+      const data = await response.json()
+      if (data.best_move && data.best_move.length >= 4) {
+        setHintSquares({ from: data.best_move.substring(0, 2), to: data.best_move.substring(2, 4) })
+        setTimeout(() => setHintSquares(null), 3000)
+      }
+    } catch (error) {
+      console.error("Hint error:", error)
+    }
   }
 
   const updateWinProbability = async () => {
@@ -452,6 +471,13 @@ export default function GamePage() {
               >
                 Undo Last Move
               </button>
+              <button 
+                onClick={handleHint}
+                disabled={gameOver || isCpuThinking}
+                className="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded disabled:bg-gray-600 w-full mb-2"
+              >
+                Hint
+              </button>
 
               {gameOver && (
                 <div className="mt-4 text-red-400 font-semibold">
@@ -551,7 +577,11 @@ export default function GamePage() {
                   ...Object.fromEntries(legalMoves.map(square => [
                     square, 
                     { backgroundColor: "rgba(0, 255, 0, 0.3)" }
-                  ]))
+                  ])),
+                  ...(hintSquares && {
+                    [hintSquares.from]: { backgroundColor: "rgba(0, 150, 255, 0.7)" },
+                    [hintSquares.to]: { backgroundColor: "rgba(0, 150, 255, 0.4)" }
+                  })
                 }}
                 draggable={true}
                 width={600}
